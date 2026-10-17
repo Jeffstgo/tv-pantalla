@@ -1,0 +1,29 @@
+{
+ "videoId": "Qr61waJ6AZg",
+ "channel": "CNN en Español",
+ "channelId": "UC_lEiu6917IJz03TnntWUaQ",
+ "title": "CNN Noticias, en vivo: sigue la última hora del mundo",
+ "fallbacks": [
+  {
+   "name": "CNN Chile",
+   "id": "UCpOAcjJNAp0Y0fhznRrXIJQ"
+  },
+  {
+   "name": "CNN en Español",
+   "id": "UC_lEiu6917IJz03TnntWUaQ"
+  },
+  {
+   "name": "T13",
+   "id": "UCPClE65B0W8cc82dytDKIrw"
+  },
+  {
+   "name": "France 24 Español",
+   "id": "UCUdOoVWuWmgo1wByzcsyKDQ"
+  },
+  {
+   "name": "DW Español",
+   "id": "UCT4Jg8h03dD0iN3Pb5L0PMA"
+  }
+ ],
+ "updatedAt": "2026-10-17T18:57:26.998Z"
+}

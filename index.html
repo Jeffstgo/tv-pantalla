@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Pantalla TV</title>
+<style>
+  :root {
+    --bg: #0b0d10;
+    --panel: #15191f;
+    --line: #232a33;
+    --text: #e9edf2;
+    --muted: #8b96a3;
+    --accent: #4cc2ff;
+    --live: #e5484d;
+    --gap: 1.2vw;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden; }
+  body { font-family: Roboto, "Segoe UI", system-ui, sans-serif; cursor: none; }
+
+  .app { display: grid; grid-template-columns: 70fr 30fr; gap: var(--gap); padding: 1.6vw; height: 100vh; }
+  .left { display: grid; grid-template-rows: auto 1fr; gap: var(--gap); min-height: 0; }
+  .right { display: flex; flex-direction: column; gap: var(--gap); min-height: 0; }
+  .panel { background: var(--panel); border-radius: .6vw; padding: 1.2vw 1.4vw; }
+
+  /* Video */
+  .video { position: relative; aspect-ratio: 16 / 9; width: 100%; background: #000; border-radius: .6vw; overflow: hidden; }
+  .video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+  /* Titulares */
+  .news { display: flex; flex-direction: column; min-height: 0; }
+  .news-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: .6vw; }
+  .label { font-size: .85vw; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); font-weight: 600; }
+  .news-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; justify-content: space-around; flex: 1; transition: opacity .6s; }
+  .news-list.fade { opacity: 0; }
+  .news-item { display: grid; grid-template-columns: 9.5vw 1fr; gap: 1vw; align-items: baseline; }
+  .src { font-size: .85vw; font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .src small { display: block; font-weight: 400; color: var(--muted); font-size: .8vw; margin-top: .15vw; }
+  .ttl { font-size: 1.32vw; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+  /* Reloj */
+  .clock .time { font-size: 6vw; font-weight: 300; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .clock .date { font-size: 1.35vw; color: var(--muted); margin-top: .5vw; }
+
+  /* Clima */
+  .now { display: grid; grid-template-columns: auto 1fr; gap: 1vw; align-items: center; }
+  .now .icon { font-size: 4.2vw; line-height: 1; }
+  .now .temp { font-size: 4vw; font-weight: 300; line-height: 1; }
+  .now .cond { font-size: 1.25vw; margin-top: .3vw; }
+  .now .range { font-size: 1vw; color: var(--muted); margin-top: .2vw; }
+  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: .8vw; }
+  .facts span { display: block; font-size: .8vw; color: var(--muted); }
+  .facts b { display: block; font-size: 1.25vw; font-weight: 500; margin-top: .15vw; }
+  .row { display: grid; gap: .6vw; text-align: center; }
+  .row.hours { grid-template-columns: repeat(6, 1fr); }
+  .row.days { grid-template-columns: repeat(3, 1fr); }
+  .cell .n { font-size: .9vw; color: var(--muted); }
+  .cell .i { font-size: 1.7vw; margin: .25vw 0; }
+  .cell .t { font-size: 1.1vw; }
+  .cell .t span { color: var(--muted); }
+  .cell .p { font-size: .8vw; color: var(--accent); margin-top: .15vw; min-height: 1.1em; }
+
+  .weather { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: space-between; }
+  .weather .sec { border-top: 1px solid var(--line); padding-top: .9vw; }
+  .weather .sec .label { margin-bottom: .5vw; font-size: .75vw; }
+  .foot { font-size: .85vw; color: var(--muted); display: flex; justify-content: space-between; align-items: center; gap: 1vw; }
+  .foot > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .foot .live { display: flex; align-items: center; gap: .45vw; color: var(--text); min-width: 0; }
+  .foot .live .dot { width: .55vw; height: .55vw; border-radius: 50%; background: var(--live); }
+  .foot .live em { font-style: normal; color: var(--muted); }
+  .stale { color: #f5a524; }
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="left">
+    <div class="video">
+      <iframe id="player" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" title="Noticias en vivo"></iframe>
+    </div>
+    <div class="panel news">
+      <div class="news-head"><span class="label">Titulares</span><span class="label" id="news-page"></span></div>
+      <ul class="news-list" id="news"></ul>
+    </div>
+  </section>
+
+  <aside class="right">
+    <div class="panel clock">
+      <div class="time" id="time">--:--</div>
+      <div class="date" id="date"></div>
+    </div>
+    <div class="panel weather">
+      <div>
+        <div class="label" style="margin-bottom:.8vw">Santiago</div>
+        <div class="now">
+          <div class="icon" id="w-icon">·</div>
+          <div>
+            <div class="temp" id="w-temp">--°</div>
+            <div class="cond" id="w-cond">Cargando clima…</div>
+            <div class="range" id="w-range"></div>
+          </div>
+        </div>
+      </div>
+      <div class="facts" id="w-facts"></div>
+      <div class="sec"><div class="label">Próximas horas</div><div class="row hours" id="w-hours"></div></div>
+      <div class="sec"><div class="label">Próximos días</div><div class="row days" id="w-days"></div></div>
+    </div>
+    <div class="foot">
+      <span class="live"><span class="dot"></span><span id="channel">Cargando video…</span></span>
+      <span id="foot-right"></span>
+    </div>
+  </aside>
+</div>
+
+<script>
+const TZ = 'America/Santiago';
+// ?data=./data/ permite probar con los datos locales.
+const DATA = new URLSearchParams(location.search).get('data') || 'https://raw.githubusercontent.com/Jeffstgo/tv-pantalla/main/data/';
+const LAT = -33.4489, LON = -70.6693;
+const NEWS_PER_PAGE = 3, NEWS_SECONDS = 15;
+
+const $ = (id) => document.getElementById(id);
+const fmtTime = new Intl.DateTimeFormat('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: TZ });
+const fmtDate = new Intl.DateTimeFormat('es-CL', { weekday: 'long', day: 'numeric', month: 'long', timeZone: TZ });
+const fmtDay = new Intl.DateTimeFormat('es-CL', { weekday: 'long', timeZone: TZ });
+
+async function getJson(url) {
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error(res.status);
+  return res.json();
+}
+
+function ago(iso) {
+  const min = Math.round((Date.now() - Date.parse(iso)) / 60000);
+  if (min < 60) return `hace ${Math.max(min, 1)} min`;
+  const h = Math.round(min / 60);
+  return h < 24 ? `hace ${h} h` : `hace ${Math.round(h / 24)} d`;
+}
+
+/* ---------- Reloj ---------- */
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+function tick() {
+  const now = new Date();
+  $('time').textContent = fmtTime.format(now);
+  $('date').textContent = cap(fmtDate.format(now));
+}
+tick();
+setInterval(tick, 5000);
+
+/* ---------- Clima (Open-Meteo) ---------- */
+const WMO = {
+  0: ['Despejado', '☀️', '🌙'], 1: ['Mayormente despejado', '🌤️', '🌙'], 2: ['Parcialmente nublado', '⛅', '☁️'], 3: ['Nublado', '☁️'],
+  45: ['Neblina', '🌫️'], 48: ['Neblina', '🌫️'],
+  51: ['Llovizna débil', '🌦️'], 53: ['Llovizna', '🌦️'], 55: ['Llovizna intensa', '🌧️'], 56: ['Llovizna helada', '🌧️'], 57: ['Llovizna helada', '🌧️'],
+  61: ['Lluvia débil', '🌧️'], 63: ['Lluvia', '🌧️'], 65: ['Lluvia intensa', '🌧️'], 66: ['Lluvia helada', '🌧️'], 67: ['Lluvia helada', '🌧️'],
+  71: ['Nieve débil', '🌨️'], 73: ['Nieve', '🌨️'], 75: ['Nieve intensa', '❄️'], 77: ['Granizo fino', '🌨️'],
+  80: ['Chubascos', '🌦️'], 81: ['Chubascos', '🌧️'], 82: ['Chubascos fuertes', '⛈️'], 85: ['Chubascos de nieve', '🌨️'], 86: ['Chubascos de nieve', '❄️'],
+  95: ['Tormenta', '⛈️'], 96: ['Tormenta con granizo', '⛈️'], 99: ['Tormenta con granizo', '⛈️'],
+};
+const wmo = (code, isDay = 1) => {
+  const w = WMO[code] ?? ['—', '·'];
+  return { text: w[0], icon: !isDay && w[2] ? w[2] : w[1] };
+};
+
+async function loadWeather() {
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}`
+      + '&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,is_day'
+      + '&hourly=temperature_2m,weather_code,precipitation_probability,is_day&forecast_hours=7'
+      + '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max'
+      + `&timezone=${encodeURIComponent(TZ)}&forecast_days=4`;
+    const d = await getJson(url);
+    const c = d.current, w = wmo(c.weather_code, c.is_day), t = d.daily, h = d.hourly;
+    const rain = (p) => (p >= 20 ? `💧 ${p}%` : '');
+    $('w-icon').textContent = w.icon;
+    $('w-temp').textContent = `${Math.round(c.temperature_2m)}°`;
+    $('w-cond').textContent = w.text;
+    $('w-range').textContent = `Máx ${Math.round(t.temperature_2m_max[0])}° · Mín ${Math.round(t.temperature_2m_min[0])}°`;
+    $('w-facts').innerHTML =
+      `<div><span>Sensación</span><b>${Math.round(c.apparent_temperature)}°</b></div>`
+      + `<div><span>Humedad</span><b>${c.relative_humidity_2m}%</b></div>`
+      + `<div><span>Viento</span><b>${Math.round(c.wind_speed_10m)} km/h</b></div>`;
+    // Horas siguientes a la actual (la API entrega desde la hora en curso).
+    $('w-hours').innerHTML = h.time.slice(1, 7).map((time, i) => {
+      const hw = wmo(h.weather_code[i + 1], h.is_day[i + 1]);
+      return `<div class="cell"><div class="n">${time.slice(11, 13)} h</div><div class="i">${hw.icon}</div>`
+        + `<div class="t">${Math.round(h.temperature_2m[i + 1])}°</div><div class="p">${rain(h.precipitation_probability[i + 1])}</div></div>`;
+    }).join('');
+    $('w-days').innerHTML = [1, 2, 3].map((i) => {
+      const dw = wmo(t.weather_code[i]);
+      return `<div class="cell"><div class="n">${cap(fmtDay.format(new Date(t.time[i] + 'T12:00:00')))}</div>`
+        + `<div class="i">${dw.icon}</div><div class="t">${Math.round(t.temperature_2m_max[i])}° <span>${Math.round(t.temperature_2m_min[i])}°</span></div>`
+        + `<div class="p">${rain(t.precipitation_probability_max[i])}</div></div>`;
+    }).join('');
+  } catch (e) {
+    $('w-cond').textContent = 'Clima no disponible';
+  }
+}
+loadWeather();
+setInterval(loadWeather, 15 * 60 * 1000);
+
+/* ---------- Titulares ---------- */
+let news = [], newsPage = 0;
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function renderNews() {
+  if (!news.length) return;
+  const pages = Math.ceil(news.length / NEWS_PER_PAGE);
+  newsPage %= pages;
+  const list = $('news');
+  list.classList.add('fade');
+  setTimeout(() => {
+    list.innerHTML = news.slice(newsPage * NEWS_PER_PAGE, newsPage * NEWS_PER_PAGE + NEWS_PER_PAGE)
+      .map((h) => `<li class="news-item"><div class="src">${esc(h.source)}<small>${ago(h.date)}</small></div><div class="ttl">${esc(h.title)}</div></li>`)
+      .join('');
+    $('news-page').textContent = `${newsPage + 1} / ${pages}`;
+    list.classList.remove('fade');
+    newsPage++;
+  }, 600);
+}
+
+async function loadNews() {
+  try {
+    const d = await getJson(DATA + 'headlines.json');
+    news = d.items;
+    const old = Date.now() - Date.parse(d.updatedAt) > 3 * 3600 * 1000;
+    $('foot-right').innerHTML = old ? '<span class="stale">Titulares desactualizados</span>' : `Titulares ${fmtTime.format(new Date(d.updatedAt))}`;
+    if (!$('news').children.length) renderNews();
+  } catch (e) {
+    $('foot-right').innerHTML = '<span class="stale">Titulares no disponibles</span>';
+  }
+}
+loadNews();
+setInterval(loadNews, 10 * 60 * 1000);
+setInterval(renderNews, NEWS_SECONDS * 1000);
+
+/* ---------- Video en vivo ---------- */
+let currentSrc = '', currentName = '', player = null, fallbacks = [], fallbackIndex = -1;
+const embedParams = 'autoplay=1&mute=0&controls=0&rel=0&playsinline=1&enablejsapi=1&origin=' + encodeURIComponent(location.origin);
+
+function showChannel(muted) {
+  $('channel').innerHTML = `${esc(currentName)} en vivo${muted ? ' <em>· sin sonido (OK para activar)</em>' : ''}`;
+}
+
+function setVideo(src, name) {
+  if (src === currentSrc) return;
+  currentSrc = src;
+  currentName = name;
+  showChannel(false);
+  $('player').src = src;
+  attachPlayer();
+}
+
+function nextFallback() {
+  fallbackIndex++;
+  if (fallbackIndex >= fallbacks.length) return;
+  const f = fallbacks[fallbackIndex];
+  setVideo(`https://www.youtube.com/embed/live_stream?channel=${f.id}&${embedParams}`, f.name);
+}
+
+// Intenta reproducir con sonido; si el navegador lo bloquea, sigue sin sonido y avisa.
+function attachPlayer() {
+  if (!window.YT || !YT.Player) return;
+  player = new YT.Player('player', {
+    events: {
+      onReady: (e) => {
+        e.target.playVideo();
+        setTimeout(() => {
+          if (e.target.getPlayerState() !== YT.PlayerState.PLAYING) {
+            e.target.mute();
+            e.target.playVideo();
+            showChannel(true);
+          }
+        }, 4000);
+      },
+      onStateChange: (e) => {
+        if (e.data === YT.PlayerState.PLAYING) showChannel(e.target.isMuted());
+      },
+      onError: () => nextFallback(),
+    },
+  });
+}
+window.onYouTubeIframeAPIReady = attachPlayer;
+
+async function loadLive() {
+  try {
+    const d = await getJson(DATA + 'live.json');
+    fallbacks = d.fallbacks ?? [];
+    if (d.videoId) {
+      fallbackIndex = fallbacks.findIndex((f) => f.id === d.channelId);
+      setVideo(`https://www.youtube.com/embed/${d.videoId}?${embedParams}`, d.channel);
+    } else if (!currentSrc) {
+      fallbackIndex = -1;
+      nextFallback();
+    }
+  } catch (e) {
+    if (!currentSrc) {
+      fallbacks = [{ name: 'CNN en Español', id: 'UC_lEiu6917IJz03TnntWUaQ' }];
+      fallbackIndex = -1;
+      nextFallback();
+    }
+  }
+}
+loadLive();
+setInterval(loadLive, 10 * 60 * 1000);
+
+const api = document.createElement('script');
+api.src = 'https://www.youtube.com/iframe_api';
+document.head.appendChild(api);
+
+/* Recarga completa cada 6 horas para liberar memoria en el TV. */
+setTimeout(() => location.reload(), 6 * 3600 * 1000);
+</script>
+</body>
+</html>
